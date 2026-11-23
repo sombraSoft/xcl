@@ -68,3 +68,6 @@ features = [
     "Win32_UI_Controls_Dialogs",
     "Win32_UI_WindowsAndMessaging",
 ]
+
+[lints]
+workspace = true

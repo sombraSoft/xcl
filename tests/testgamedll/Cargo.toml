@@ -10,3 +10,6 @@ publish = false
 name = "testgame_mw"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
+
+[lints]
+workspace = true
