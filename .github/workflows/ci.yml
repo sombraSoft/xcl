@@ -2,7 +2,8 @@
 # (each prints "SKIPPED <test>: <reason>", counted at the end of scripts/test.ps1) and the
 # tests on game data pass without running. What it checks on every push and pull request:
 # the workspace builds, the unit / integration tests pass, and the recompiler's HLSL compiles
-# with the runner's DXC (Windows SDK).
+# with the runner's DXC (Windows SDK). A second job runs clippy on all targets: its warnings
+# are listed in the job's log and do not fail it, because the tree is not lint-clean.
 #
 # Left out: the test title's end-to-end run (`test_title_runs_and_game_folder_is_untouched`).
 # The runner has no System32\xgameruntime.dll (Gaming Services) and only the Microsoft Basic
@@ -52,3 +53,28 @@ jobs:
       - name: Build and test
         shell: pwsh
         run: ./scripts/test.ps1 --skip test_title_runs_and_game_folder_is_untouched
+
+  clippy:
+    name: Clippy (Windows)
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust (stable, MSVC, clippy)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup component add clippy
+          rustc --version
+          cargo clippy --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets
