@@ -39,15 +39,11 @@ jobs:
           rustup default stable
           rustc --version
 
-      - uses: actions/cache@v4
+      # Keyed on the installed rustc and the Cargo files. Only main saves; pull requests restore
+      # main's cache and do not write their own.
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: cargo-${{ runner.os }}-
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and test
         shell: pwsh
