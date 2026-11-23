@@ -17,6 +17,8 @@ permissions:
 jobs:
   description:
     name: PR description
+    # Dependabot cannot write the Tested / Not tested / AI use sections; a skipped job passes the required check.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Check the description
