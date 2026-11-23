@@ -1,0 +1,34 @@
+# Weekly dependency updates for the GitHub Actions used by the workflows and for the Cargo
+# workspace. Minor and patch updates of an ecosystem arrive as one PR; a major update is its
+# own PR. Titles read "CI: Bump ..." and "Dependencies: Bump ...".
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "CI"
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "Dependencies"
+    groups:
+      cargo-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
