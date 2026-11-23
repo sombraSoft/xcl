@@ -291,3 +291,4 @@ driver picks 64 lanes.
   `mesh_dispatch.rs` scratch / rendezvous model) are not used by this form.
 * **PRs #14 / #39** (split ES+GS / mesh into independent halves and reject cross-half
   operations): replaced by the exchange form, which needs no rejection list.
+
