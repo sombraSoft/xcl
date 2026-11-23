@@ -1,0 +1,43 @@
+# cargo-deny configuration: `cargo deny check` from the repository root.
+# CI runs `bans licenses sources` on every push and pull request (ci.yml) and `advisories` on its
+# own schedule (advisories.yml).
+
+[graph]
+# XCL builds for Windows x64 only; dependencies for other targets are left out of the graph.
+targets = ["x86_64-pc-windows-msvc"]
+all-features = true
+
+[advisories]
+# RustSec vulnerabilities fail the check. Unmaintained and unsound notices count for every crate.
+# A yanked version fails too: Cargo.lock should move off it.
+yanked = "deny"
+unmaintained = "all"
+unsound = "all"
+ignore = []
+
+[licenses]
+# XCL is GPL-2.0-only (CONTRIBUTING.md, "Licence and provenance"): every dependency's licence must
+# be GPL-2.0-compatible. Apache-2.0 alone is not, so it is not listed; crates offered as
+# `MIT OR Apache-2.0` pass through MIT. GPL-2.0-only is listed for XCL's own workspace crates.
+confidence-threshold = 0.93
+allow = [
+    "BSD-2-Clause", # retour
+    "GPL-2.0-only", # xcl, xcl-testtitle, testgame-mw
+    "MIT",
+    "Unicode-3.0", # unicode-ident: `(MIT OR Apache-2.0) AND Unicode-3.0`
+]
+exceptions = []
+
+[bans]
+# Duplicate versions are reported, not refused: windows-sys 0.52 comes through retour -> region
+# next to XCL's 0.61, and syn 2 through windows-implement / windows-interface next to serde's syn 3.
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+# Crates come from crates.io only.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

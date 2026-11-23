@@ -2,7 +2,9 @@
 # (each prints "SKIPPED <test>: <reason>", counted at the end of scripts/test.ps1) and the
 # tests on game data pass without running. What it checks on every push and pull request:
 # the workspace builds, the unit / integration tests pass, and the recompiler's HLSL compiles
-# with the runner's DXC (Windows SDK).
+# with the runner's DXC (Windows SDK). A second job runs cargo-deny (deny.toml) on Linux: every
+# dependency's licence is GPL-2.0-compatible, no crate is pulled with a wildcard version, and
+# every crate comes from crates.io. RustSec advisories are checked in advisories.yml instead.
 #
 # Left out: the test title's end-to-end run (`test_title_runs_and_game_folder_is_untouched`).
 # The runner has no System32\xgameruntime.dll (Gaming Services) and only the Microsoft Basic
@@ -52,3 +54,14 @@ jobs:
       - name: Build and test
         shell: pwsh
         run: ./scripts/test.ps1 --skip test_title_runs_and_game_folder_is_untouched
+
+  deny:
+    name: Dependencies (cargo-deny)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check bans licenses sources

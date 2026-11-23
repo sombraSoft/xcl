@@ -1,0 +1,39 @@
+# RustSec advisories for the crates in Cargo.lock (cargo-deny, `[advisories]` in deny.toml).
+#
+# This check runs apart from ci.yml because its result changes without any change to the
+# repository: a new RUSTSEC entry for a crate XCL already uses would otherwise turn every open
+# pull request red, whatever it touches. It runs every day and when started by hand, and on
+# pushes and pull requests that change Cargo.lock, deny.toml or this file, where a new or updated
+# dependency is what brings the advisory in.
+name: Advisories
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - Cargo.lock
+      - deny.toml
+      - .github/workflows/advisories.yml
+  pull_request:
+    paths:
+      - Cargo.lock
+      - deny.toml
+      - .github/workflows/advisories.yml
+
+permissions:
+  contents: read
+
+jobs:
+  advisories:
+    name: RustSec advisories (cargo-deny)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
