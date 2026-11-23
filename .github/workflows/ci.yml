@@ -1,8 +1,14 @@
 # Build + tests on a GitHub Windows runner: no GPU and no game data, so the GPU tests skip
 # (each prints "SKIPPED <test>: <reason>", counted at the end of scripts/test.ps1) and the
-# tests on game data pass without running. What it checks on every push and pull request:
-# the workspace builds, the unit / integration tests pass, and the recompiler's HLSL compiles
-# with the runner's DXC (Windows SDK).
+# tests on game data pass without running. What it checks on every push to main and every pull
+# request that can change the build: the workspace builds, the unit / integration tests pass,
+# and the recompiler's HLSL compiles with the runner's DXC (Windows SDK).
+#
+# A pull request that changes only documentation (the list is in the `changes` job) skips the
+# build: `changes` reads the PR's file list and the build job's `if:` turns false. A job skipped
+# by its `if:` reports success, so the required check is still reported and the PR can merge;
+# a workflow-level `paths` filter would leave it waiting instead. If `changes` fails, the build
+# runs.
 #
 # Left out: the test title's end-to-end run (`test_title_runs_and_game_folder_is_untouched`).
 # The runner has no System32\xgameruntime.dll (Gaming Services) and only the Microsoft Basic
@@ -23,8 +29,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # What a pull request changes, as outputs the other jobs test in their `if:`. Each output is
+  # "true" unless the PR's files show the job has nothing to check, so a push, a list that cannot
+  # be read or a file nobody listed runs everything. The list below is what is safe to skip
+  # (nothing at build or test time reads it), not what to run: crates/xcl/data/stubdb.toml and
+  # tests/data/ are read by the code, which is why only top-level .md files are skipped.
+  # A renamed file counts under its old and its new name.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      rust: ${{ steps.files.outputs.rust }}
+      scripts: ${{ steps.files.outputs.scripts }}
+    steps:
+      - name: Sort the PR's files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          rust=true scripts=true
+          # the API lists at most 3000 files: a longer list runs everything
+          if [ "$EVENT" = pull_request ] &&
+             gh api "repos/$REPO/pulls/$NUMBER/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)' > files.txt &&
+             [ -s files.txt ] && [ "$(wc -l < files.txt)" -lt 3000 ]; then
+            rust=false scripts=false
+            while IFS= read -r f; do
+              echo "$f"
+              case "$f" in
+                docs/*|.github/ISSUE_TEMPLATE/*|.github/pull_request_template.md|.github/workflows/pr-check.yml) ;;
+                LICENSE|.gitignore) ;;
+                */*) rust=true ;;
+                *.md) ;;
+                *) rust=true ;;
+              esac
+              case "$f" in
+                scripts/*|.github/workflows/ci.yml) scripts=true ;;
+              esac
+            done < files.txt
+          fi
+          echo "rust=$rust scripts=$scripts"
+          echo "rust=$rust" >> "$GITHUB_OUTPUT"
+          echo "scripts=$scripts" >> "$GITHUB_OUTPUT"
+
   windows:
     name: Build and test (Windows, no GPU)
+    needs: changes
+    # `!cancelled()` keeps the build when `changes` failed (its outputs are then empty)
+    if: ${{ !cancelled() && needs.changes.outputs.rust != 'false' }}
     runs-on: windows-2025
     timeout-minutes: 45
     env:
